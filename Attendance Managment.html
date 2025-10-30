@@ -1,0 +1,199 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attendance Management System</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(-45deg, #74ABE2, #5563DE, #23A6D5, #23D5AB);
+      background-size: 400% 400%;
+      animation: gradient 10s ease infinite;
+      color: #fff;
+      font-family: 'Poppins', sans-serif;
+      min-height: 100vh;
+      padding-top: 40px;
+    }
+    @keyframes gradient {
+      0% {background-position: 0% 50%;}
+      50% {background-position: 100% 50%;}
+      100% {background-position: 0% 50%;}
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    }
+    .table {
+      background-color: #fff;
+      color: #000;
+    }
+    .warning {
+      color: red;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 class="text-center mb-4">📋 Student Attendance Management</h2>
+
+    <div class="row g-2 mb-3">
+      <div class="col-md-4">
+        <input type="text" id="rollNumber" class="form-control" placeholder="Enter Roll Number">
+      </div>
+      <div class="col-md-6">
+        <input type="text" id="studentName" class="form-control" placeholder="Enter Student Name">
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-light w-100" onclick="addStudent()">Add</button>
+      </div>
+    </div>
+
+    <div id="attendanceSection" class="mt-4">
+      <h4>Mark Attendance</h4>
+      <input type="date" id="attendanceDate" class="form-control mb-2" value="">
+      <table class="table table-bordered text-center">
+        <thead>
+          <tr>
+            <th>Roll No.</th>
+            <th>Student Name</th>
+            <th>Present</th>
+            <th>Absent</th>
+          </tr>
+        </thead>
+        <tbody id="attendanceTableBody"></tbody>
+      </table>
+      <button class="btn btn-success" onclick="saveAttendance()">Save Attendance</button>
+    </div>
+
+    <hr class="my-4">
+
+    <div id="reportSection">
+      <h4>📅 Attendance Report</h4>
+      <table class="table table-bordered text-center">
+        <thead>
+          <tr>
+            <th>Roll No.</th>
+            <th>Student Name</th>
+            <th>Total Present</th>
+            <th>Total Absent</th>
+            <th>⚠️ Warning</th>
+          </tr>
+        </thead>
+        <tbody id="reportTableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="text-center mt-4">
+      <button class="btn btn-danger" onclick="clearData()">🗑️ Clear All Data</button>
+    </div>
+  </div>
+
+  <script>
+    let students = JSON.parse(localStorage.getItem('students')) || [];
+    let attendanceData = JSON.parse(localStorage.getItem('attendanceData')) || {};
+
+    document.getElementById('attendanceDate').valueAsDate = new Date();
+
+    function addStudent() {
+      const roll = document.getElementById('rollNumber').value.trim();
+      const name = document.getElementById('studentName').value.trim();
+
+      if (roll === '' || name === '') {
+        alert("Please enter both Roll Number and Name!");
+        return;
+      }
+
+      if (students.some(s => s.roll === roll)) {
+        alert("Roll number already exists!");
+        return;
+      }
+
+      students.push({ roll, name });
+      localStorage.setItem('students', JSON.stringify(students));
+
+      document.getElementById('rollNumber').value = '';
+      document.getElementById('studentName').value = '';
+      renderStudents();
+      renderReport();
+    }
+
+    function renderStudents() {
+      const tbody = document.getElementById('attendanceTableBody');
+      tbody.innerHTML = '';
+      students.forEach(s => {
+        const row = `
+          <tr>
+            <td>${s.roll}</td>
+            <td>${s.name}</td>
+            <td><input type="radio" name="${s.roll}" value="P"></td>
+            <td><input type="radio" name="${s.roll}" value="A"></td>
+          </tr>`;
+        tbody.innerHTML += row;
+      });
+    }
+
+    function saveAttendance() {
+      const date = document.getElementById('attendanceDate').value;
+      if (!date) {
+        alert("Please select a date!");
+        return;
+      }
+
+      if (!attendanceData[date]) attendanceData[date] = {};
+
+      students.forEach(s => {
+        const status = document.querySelector(`input[name="${s.roll}"]:checked`);
+        if (status) {
+          attendanceData[date][s.roll] = status.value;
+        }
+      });
+
+      localStorage.setItem('attendanceData', JSON.stringify(attendanceData));
+      alert("✅ Attendance saved successfully!");
+      renderReport();
+    }
+
+    function renderReport() {
+      const reportBody = document.getElementById('reportTableBody');
+      reportBody.innerHTML = '';
+
+      students.forEach(s => {
+        let present = 0, absent = 0;
+        for (let date in attendanceData) {
+          if (attendanceData[date][s.roll] === 'P') present++;
+          else if (attendanceData[date][s.roll] === 'A') absent++;
+        }
+        const warning = absent > 3 ? "<span class='warning'>⚠️</span>" : "";
+        const rowClass = absent > 3 ? "table-danger" : "";
+        const row = `<tr class="${rowClass}">
+          <td>${s.roll}</td>
+          <td>${s.name}</td>
+          <td>${present}</td>
+          <td>${absent}</td>
+          <td>${warning}</td>
+        </tr>`;
+        reportBody.innerHTML += row;
+      });
+    }
+
+    function clearData() {
+      if (confirm("Are you sure you want to clear all data?")) {
+        localStorage.clear();
+        students = [];
+        attendanceData = {};
+        renderStudents();
+        renderReport();
+        alert("All data cleared!");
+      }
+    }
+
+    renderStudents();
+    renderReport();
+  </script>
+</body>
+</html>
